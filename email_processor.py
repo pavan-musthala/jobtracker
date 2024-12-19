@@ -11,29 +11,40 @@ from datetime import datetime
 import base64
 import email.utils
 import time
+import config
 
 class EmailProcessor:
     def __init__(self):
-        self.SCOPES = ['https://www.googleapis.com/auth/gmail.readonly']
-        self.db = DatabaseManager()
+        """Initialize the EmailProcessor"""
+        self.service = None
+        self.setup_gmail_service()
 
-    def get_gmail_service(self):
+    def setup_gmail_service(self):
+        """Set up Gmail API service"""
         creds = None
-        if os.path.exists('token.pickle'):
-            with open('token.pickle', 'rb') as token:
+        token_path = config.TOKEN_PATH
+        credentials_path = config.get_gmail_credentials()
+
+        if os.path.exists(token_path):
+            with open(token_path, 'rb') as token:
                 creds = pickle.load(token)
-        
+
         if not creds or not creds.valid:
             if creds and creds.expired and creds.refresh_token:
                 creds.refresh(Request())
             else:
                 flow = InstalledAppFlow.from_client_secrets_file(
-                    'credentials.json', self.SCOPES)
+                    credentials_path, config.SCOPES)
                 creds = flow.run_local_server(port=0)
-            with open('token.pickle', 'wb') as token:
+
+            with open(token_path, 'wb') as token:
                 pickle.dump(creds, token)
-        
-        return build('gmail', 'v1', credentials=creds)
+
+        self.service = build('gmail', 'v1', credentials=creds)
+
+        # Clean up temporary credentials file if it exists
+        if credentials_path == "temp_credentials.json" and os.path.exists(credentials_path):
+            os.remove(credentials_path)
 
     def extract_date_from_email(self, headers):
         """Extract the actual date from email headers"""
@@ -292,8 +303,6 @@ class EmailProcessor:
     
     def scan_emails(self):
         try:
-            service = self.get_gmail_service()
-            
             # Search for relevant emails from the last month
             query = """
                 subject:(
@@ -305,7 +314,7 @@ class EmailProcessor:
                 newer_than:30d
             """
             
-            results = service.users().messages().list(userId='me', q=query).execute()
+            results = self.service.users().messages().list(userId='me', q=query).execute()
             messages = results.get('messages', [])
             
             if not messages:
@@ -314,7 +323,7 @@ class EmailProcessor:
             
             for message in messages:
                 try:
-                    msg = service.users().messages().get(userId='me', id=message['id']).execute()
+                    msg = self.service.users().messages().get(userId='me', id=message['id']).execute()
                     email_data = msg['payload']
                     
                     # Get headers
