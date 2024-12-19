@@ -3,39 +3,39 @@ import json
 import streamlit as st
 from pathlib import Path
 
-# Print for debugging
-print("Available secrets:", st.secrets)
-
 def get_gmail_user():
     """Get Gmail user from Streamlit secrets"""
+    # Debug print
+    st.write("Debug - All secrets:", st.secrets)
+    
     try:
-        # Direct access to GMAIL_USER from secrets
-        if hasattr(st.secrets, 'GMAIL_USER'):
-            return st.secrets.GMAIL_USER
-        # Try dictionary access
-        elif 'GMAIL_USER' in st.secrets:
-            return st.secrets['GMAIL_USER']
-        else:
-            print("GMAIL_USER not found in secrets")
-            return None
+        # Try direct dictionary access
+        secrets_dict = dict(st.secrets)
+        if 'GMAIL_USER' in secrets_dict:
+            return secrets_dict['GMAIL_USER']
+        
+        st.error("GMAIL_USER not found in secrets. Available keys: " + ", ".join(secrets_dict.keys()))
+        return None
     except Exception as e:
-        print(f"Error getting GMAIL_USER: {str(e)}")
+        st.error(f"Error accessing secrets: {str(e)}")
         return None
 
 def get_gmail_credentials():
     """Get Gmail API credentials from Streamlit secrets or local file"""
     try:
         # Try to get credentials from Streamlit secrets
-        if hasattr(st.secrets, 'google_credentials'):
+        secrets_dict = dict(st.secrets)
+        if 'google_credentials' in secrets_dict:
+            creds = secrets_dict['google_credentials']
             credentials = {
                 "installed": {
-                    "client_id": st.secrets.google_credentials.client_id,
-                    "project_id": st.secrets.google_credentials.project_id,
-                    "auth_uri": st.secrets.google_credentials.auth_uri,
-                    "token_uri": st.secrets.google_credentials.token_uri,
-                    "auth_provider_x509_cert_url": st.secrets.google_credentials.auth_provider_x509_cert_url,
-                    "client_secret": st.secrets.google_credentials.client_secret,
-                    "redirect_uris": st.secrets.google_credentials.redirect_uris
+                    "client_id": creds['client_id'],
+                    "project_id": creds['project_id'],
+                    "auth_uri": creds['auth_uri'],
+                    "token_uri": creds['token_uri'],
+                    "auth_provider_x509_cert_url": creds['auth_provider_x509_cert_url'],
+                    "client_secret": creds['client_secret'],
+                    "redirect_uris": creds['redirect_uris']
                 }
             }
             # Write credentials to a temporary file
@@ -48,7 +48,7 @@ def get_gmail_credentials():
             creds_path = "credentials.json"
             if not os.path.exists(creds_path):
                 raise FileNotFoundError(
-                    "credentials.json not found. Please either add it locally or configure Streamlit secrets."
+                    "credentials.json not found and google_credentials not in secrets"
                 )
             return creds_path
     except Exception as e:
