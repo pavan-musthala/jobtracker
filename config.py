@@ -2,16 +2,31 @@ import os
 import json
 import streamlit as st
 from pathlib import Path
-from dotenv import load_dotenv
 
-load_dotenv()
+# Print for debugging
+print("Available secrets:", st.secrets)
 
-# Gmail API credentials
+def get_gmail_user():
+    """Get Gmail user from Streamlit secrets"""
+    try:
+        # Direct access to GMAIL_USER from secrets
+        if hasattr(st.secrets, 'GMAIL_USER'):
+            return st.secrets.GMAIL_USER
+        # Try dictionary access
+        elif 'GMAIL_USER' in st.secrets:
+            return st.secrets['GMAIL_USER']
+        else:
+            print("GMAIL_USER not found in secrets")
+            return None
+    except Exception as e:
+        print(f"Error getting GMAIL_USER: {str(e)}")
+        return None
+
 def get_gmail_credentials():
     """Get Gmail API credentials from Streamlit secrets or local file"""
     try:
         # Try to get credentials from Streamlit secrets
-        if 'google_credentials' in st.secrets:
+        if hasattr(st.secrets, 'google_credentials'):
             credentials = {
                 "installed": {
                     "client_id": st.secrets.google_credentials.client_id,
@@ -40,15 +55,6 @@ def get_gmail_credentials():
         st.error(f"Error loading credentials: {str(e)}")
         raise
 
-def get_gmail_user():
-    """Get Gmail user from environment or Streamlit secrets"""
-    # Try to get from Streamlit secrets first
-    if 'GMAIL_USER' in st.secrets:
-        return st.secrets.GMAIL_USER
-    
-    # Fallback to environment variable
-    return os.getenv('GMAIL_USER')
-
 # Token file path
 TOKEN_PATH = "token.pickle"
 
@@ -58,7 +64,7 @@ SCOPES = ['https://www.googleapis.com/auth/gmail.readonly']
 # Email search query
 SEARCH_QUERY = 'subject:"applied" OR subject:"application" OR subject:"thank you for applying" OR subject:"interview" OR subject:"position" OR subject:"job" OR subject:"opportunity" OR subject:"candidacy" OR subject:"candidate" OR subject:"recruitment" OR subject:"hiring" OR subject:"consideration"'
 
-# Database configuration (SQLite)
+# Database configuration
 DATABASE_URL = "sqlite:///job_applications.db"
 
 # Email scanning configuration

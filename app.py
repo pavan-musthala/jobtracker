@@ -13,11 +13,30 @@ def main():
     # Initialize database
     db = DatabaseManager()
     
+    # Debug information
+    st.sidebar.title("Debug Info")
+    if st.sidebar.checkbox("Show Debug Info"):
+        st.sidebar.write("Secrets available:", list(st.secrets.keys()) if hasattr(st.secrets, 'keys') else "No secrets found")
+        gmail_user = config.get_gmail_user()
+        st.sidebar.write("Gmail User:", gmail_user if gmail_user else "Not configured")
+    
     # Check if credentials are properly configured
     try:
         gmail_user = config.get_gmail_user()
         if not gmail_user:
-            st.error("Gmail user not configured. Please set GMAIL_USER in Streamlit secrets or environment variables.")
+            st.error("""
+            Gmail user not configured. Please set GMAIL_USER in Streamlit secrets.
+            
+            Your secrets should look like this:
+            ```toml
+            [google_credentials]
+            client_id = "..."
+            ...
+            
+            GMAIL_USER = "your.email@gmail.com"
+            ```
+            Make sure GMAIL_USER is outside the [google_credentials] section.
+            """)
             return
             
         # Create email processor
@@ -31,6 +50,13 @@ def main():
                     st.success("Email scan complete!")
                 except Exception as e:
                     st.error(f"Error scanning emails: {str(e)}")
+                    st.error("Please check your Google Cloud Console configuration and make sure:")
+                    st.markdown("""
+                    1. Gmail API is enabled
+                    2. OAuth consent screen is configured
+                    3. OAuth credentials are properly set up
+                    4. Redirect URIs include `http://localhost`
+                    """)
         
         # Display applications
         applications = db.get_all_applications()
@@ -82,7 +108,8 @@ def main():
             
     except Exception as e:
         st.error(f"Error: {str(e)}")
-        st.info("Please make sure you have configured your credentials correctly in Streamlit secrets.")
+        st.error("Please make sure you have configured your credentials correctly in Streamlit secrets.")
+        st.info("Check the debug information in the sidebar for more details.")
 
 if __name__ == "__main__":
     main()
